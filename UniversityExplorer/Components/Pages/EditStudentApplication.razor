@@ -1,0 +1,103 @@
+﻿@*
+    EDIT APPLICATION PAGE: loads an existing application, lets the
+    user change it, then sends it back with PUT.
+    {Id:int} in the route means the URL must end with a number, e.g. /student-applications/edit/5
+*@
+@page "/student-applications/edit/{Id:int}"
+@inject StudentApplicationService ApplicationService
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Application</PageTitle>
+
+<h1 class="mb-4">Edit Application #@Id</h1>
+
+@if (isLoading)
+{
+    @* LOADING STATE while fetching the current values *@
+    <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span>Loading application...</span>
+    </div>
+}
+else if (hasError)
+{
+    <div class="alert alert-danger">Unable to retrieve data.</div>
+}
+else if (application is null)
+{
+    <div class="alert alert-warning">
+        Application #@Id was not found.
+        <a href="student-applications" class="alert-link">Back to list</a>
+    </div>
+}
+else
+{
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div style="max-width:600px">
+        @* SAME form component as Create, but already filled with the current values *@
+        <StudentApplicationForm Application="application"
+                                SubmitText="Update Application"
+                                IsSubmitting="isSubmitting"
+                                OnValidSubmit="UpdateAsync" />
+
+        <a href="student-applications" class="btn btn-link mt-2 px-0">Cancel</a>
+    </div>
+}
+
+@code {
+    // Filled automatically from the URL: /student-applications/edit/5 → Id = 5
+    [Parameter]
+    public int Id { get; set; }
+
+    private StudentApplication? application;
+    private bool isLoading;
+    private bool hasError;
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    // 1. LOAD the existing application when the page opens
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            application = await ApplicationService.GetByIdAsync(Id);
+        }
+        catch (Exception)
+        {
+            hasError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // 2. SAVE: runs only when the form is valid
+    private async Task UpdateAsync(StudentApplication app)
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            app.Id = Id;   // make sure the Id in the body matches the URL
+
+            // PUT https://edutots.net/api/studentapplication/5
+            await ApplicationService.UpdateAsync(Id, app);
+
+            // 3. REDIRECT back to the list (required by the brief),
+            //    with ?updated=5 so the list page shows a success message
+            Navigation.NavigateTo($"/student-applications?updated={Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not update the application. {ex.Message}";
+            isSubmitting = false;
+        }
+    }
+}

@@ -1,0 +1,35 @@
+﻿@*
+    StudentApplicationRow: ONE row of the applications table.
+    When "Edit" is clicked, it tells the parent page via OnEdit
+    (the brief's "Application selected for editing" EventCallback).
+*@
+
+<tr>
+    <td>@Application.Id</td>
+    <td>@Application.StudentName</td>
+    <td>@Application.UniversityName</td>
+    <td>@Application.Country</td>
+    <td>@Application.CourseName</td>
+
+    @* The API doesn't store dates for old records, so show "N/A" if empty.
+       "dd/MM/yyyy" = Irish/UK date format, e.g. 11/11/2026 *@
+    <td>@(Application.ApplicationDate?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+
+    <td>
+        @* Send THIS application up to the parent page *@
+        <button class="btn btn-sm btn-outline-primary"
+                @onclick="() => OnEdit.InvokeAsync(Application)">
+            Edit
+        </button>
+    </td>
+</tr>
+
+@code {
+    // INPUT: the application shown in this row
+    [Parameter, EditorRequired]
+    public StudentApplication Application { get; set; } = default!;
+
+    // OUTPUT: "the user wants to edit this application"
+    [Parameter]
+    public EventCallback<StudentApplication> OnEdit { get; set; }
+}

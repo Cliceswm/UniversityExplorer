@@ -1,0 +1,279 @@
+﻿@*
+    UNIVERSITY EXPLORER PAGE: the API MASHUP.
+    Combines the Countries API and the Universities API on one page.
+*@
+
+@* The URL for this page *@
+@page "/university-explorer"
+
+@* @inject asks Blazor for the services we registered in Program.cs *@
+@inject CountryService CountryService
+@inject UniversityService UniversityService
+@inject NavigationManager Navigation
+
+@* Text shown on the browser tab *@
+<PageTitle>University Explorer</PageTitle>
+
+<h1 class="mb-4">University Explorer</h1>
+
+@* ================= 1. COUNTRY DROPDOWN ================= *@
+
+@if (isLoadingCountries)
+{
+    @* LOADING STATE: shown while the Countries API is answering *@
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span>Loading countries...</span>
+    </div>
+}
+else if (countriesError)
+{
+    @* ERROR STATE: shown if the Countries API failed *@
+    <div class="alert alert-danger">
+        Unable to retrieve countries. Please check your connection.
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="LoadCountriesAsync">Try again</button>
+    </div>
+}
+else
+{
+    <div class="mb-4" style="max-width:420px">
+        <label class="form-label fw-bold" for="countrySelect">Select Country</label>
+
+        @* @bind keeps selectedCountryName in sync with the dropdown.
+           @bind:after runs OnCountryChangedAsync every time the user picks a country. *@
+        <select id="countrySelect" class="form-select"
+                @bind="selectedCountryName" @bind:after="OnCountryChangedAsync">
+            <option value="">-- Choose a country --</option>
+            @foreach (var country in countries)
+            {
+                <option value="@country.Name">@country.Name</option>
+            }
+        </select>
+    </div>
+}
+
+@* ================= 2. COUNTRY DETAILS + 3. UNIVERSITIES ================= *@
+@* Only show this section once a country has been chosen *@
+@if (selectedCountry is not null)
+{
+    @* Reusable component: we pass the selected country IN as a Parameter *@
+    <CountryDetails Country="selectedCountry" />
+
+    <h3 class="mb-3">Universities in @selectedCountry.Name</h3>
+
+    @if (isLoadingUniversities)
+    {
+        @* LOADING STATE for universities *@
+        <div class="d-flex align-items-center gap-2">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <span>Loading universities...</span>
+        </div>
+    }
+    else if (universitiesError)
+    {
+        @* ERROR STATE for universities *@
+        <div class="alert alert-danger">
+            Unable to retrieve universities.
+            <button class="btn btn-sm btn-outline-danger ms-2" @onclick="LoadUniversitiesAsync">Try again</button>
+        </div>
+    }
+    else
+    {
+        @* ---------- SEARCH BOX ----------
+           @bind:event="oninput" updates SearchText on EVERY key press
+           (the default would only update when you leave the box). *@
+        <input class="form-control mb-2"
+               @bind="SearchText"
+               @bind:event="oninput"
+               placeholder="Search university..." />
+
+        <p class="text-muted small">
+            Showing @FilteredUniversities.Count of @universities.Count universities
+        </p>
+
+        @* Two columns: list on the left, details on the right *@
+        <div class="row">
+
+            @* ----- LEFT: list of university cards ----- *@
+            <div class="col-lg-8">
+                @if (FilteredUniversities.Count == 0)
+                {
+                    <div class="alert alert-info">No universities found.</div>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
+                        @foreach (var uni in FilteredUniversities)
+                        {
+                            <div class="col">
+                                @* Reusable component.
+                                   IN:  the university + whether it's selected
+                                   OUT: OnSelect, so when clicked, SelectUniversity runs here *@
+                                <UniversityCard University="uni"
+                                                IsSelected="uni == selectedUniversity"
+                                                OnSelect="SelectUniversity" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @* ----- RIGHT: details of the selected university -----
+               sticky-top keeps it visible while you scroll the list *@
+            <div class="col-lg-4">
+                <div class="sticky-top" style="top:1rem">
+                    @if (selectedUniversity is not null)
+                    {
+                        @* Reusable component with TWO EventCallbacks (OUT) *@
+                        <UniversityDetails University="selectedUniversity"
+                                           OnClose="CloseDetails"
+                                           OnApply="ApplyToUniversity" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary">
+                            Click a university to see its details.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    // ===================== STATE (the page's data) =====================
+
+    private List<Country> countries = new();          // all countries (for the dropdown)
+    private List<University> universities = new();    // universities of the chosen country
+
+    private string selectedCountryName = "";          // value of the dropdown
+    private Country? selectedCountry;                 // the full Country object picked
+    private University? selectedUniversity;           // the university clicked (or null)
+
+    // What the user typed in the search box
+    private string SearchText { get; set; } = "";
+
+    // true/false flags that control the loading and error messages
+    private bool isLoadingCountries;
+    private bool countriesError;
+    private bool isLoadingUniversities;
+    private bool universitiesError;
+
+    // ===================== SEARCH =====================
+
+    // A "computed property": recalculated every time the page redraws.
+    // Because SearchText updates on each key press, the list filters while typing.
+    private List<University> FilteredUniversities =>
+        string.IsNullOrWhiteSpace(SearchText)
+            ? universities                                       // empty search → show all
+            : universities
+                .Where(u => u.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) // ignore upper/lower case
+                .ToList();
+
+    // ===================== LIFECYCLE =====================
+
+    // Runs ONCE when the page first opens → load the countries
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCountriesAsync();
+    }
+
+    // ===================== COUNTRIES =====================
+
+    private async Task LoadCountriesAsync()
+    {
+        isLoadingCountries = true;   // show "Loading countries..."
+        countriesError = false;
+
+        try
+        {
+            countries = await CountryService.GetAllAsync();   // call the Countries API
+        }
+        catch (Exception)
+        {
+            countriesError = true;   // something went wrong → show red error box
+        }
+        finally
+        {
+            // "finally" ALWAYS runs, success or failure → hide the loading message
+            isLoadingCountries = false;
+        }
+    }
+
+    // Runs every time the user picks a country in the dropdown
+    private async Task OnCountryChangedAsync()
+    {
+        // Find the full Country object that matches the name chosen
+        selectedCountry = countries.FirstOrDefault(c => c.Name == selectedCountryName);
+
+        // Reset everything from the previous country
+        selectedUniversity = null;
+        SearchText = "";
+        universities = new();
+
+        // If they chose "-- Choose a country --", stop here
+        if (selectedCountry is null) return;
+
+        // THE MASHUP: use data from API #1 (country name) to call API #2
+        await LoadUniversitiesAsync();
+    }
+
+    // ===================== UNIVERSITIES =====================
+
+    private async Task LoadUniversitiesAsync()
+    {
+        if (selectedCountry is null) return;
+
+        // Remember which country we asked for.
+        // If the user switches country quickly, an OLD slow answer could arrive
+        // after the NEW one. We check this name so old answers are ignored.
+        var requestedCountry = selectedCountry.Name;
+
+        isLoadingUniversities = true;
+        universitiesError = false;
+
+        try
+        {
+            var result = await UniversityService.GetByCountryAsync(requestedCountry);
+
+            if (selectedCountry?.Name == requestedCountry)   // still the same country?
+                universities = result;
+        }
+        catch (Exception)
+        {
+            if (selectedCountry?.Name == requestedCountry)
+                universitiesError = true;
+        }
+        finally
+        {
+            if (selectedCountry?.Name == requestedCountry)
+                isLoadingUniversities = false;
+        }
+    }
+
+    // ===================== EVENTCALLBACK HANDLERS =====================
+    // These run when a CHILD component "calls up" to this page.
+
+    // UniversityCard → OnSelect
+    private void SelectUniversity(University university)
+    {
+        selectedUniversity = university;
+    }
+
+    // UniversityDetails → OnClose
+    private void CloseDetails()
+    {
+        selectedUniversity = null;
+    }
+
+    // UniversityDetails → OnApply
+    // Go to the Create page, passing the country and university in the URL
+    // so the form can be pre-filled (we'll handle that in Step 6).
+    private void ApplyToUniversity(University university)
+    {
+        var country = Uri.EscapeDataString(university.Country);
+        var name = Uri.EscapeDataString(university.Name);
+        Navigation.NavigateTo($"/student-applications/create?country={country}&university={name}");
+    }
+}

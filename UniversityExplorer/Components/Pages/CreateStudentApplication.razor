@@ -1,0 +1,88 @@
+﻿@*
+    CREATE STUDENT APPLICATION PAGE: creates a new application (POST).
+    Uses the shared StudentApplicationForm component.
+*@
+@page "/student-applications/create"
+@inject StudentApplicationService ApplicationService
+
+<PageTitle>Create Student Application</PageTitle>
+
+<h1 class="mb-4">Create Student Application</h1>
+
+@* SUCCESS MESSAGE (required by the brief) *@
+@if (successMessage is not null)
+{
+    <div class="alert alert-success">
+        @successMessage
+        <a href="student-applications" class="alert-link ms-2">View all applications</a>
+    </div>
+}
+
+@* ERROR MESSAGE if the API rejects the request *@
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div style="max-width:600px">
+    @* The SAME form component the Edit page uses.
+       When the user submits valid data → SaveAsync runs here. *@
+    <StudentApplicationForm Application="application"
+                            SubmitText="Submit Application"
+                            IsSubmitting="isSubmitting"
+                            OnValidSubmit="SaveAsync" />
+</div>
+
+@code {
+    // A new, empty application for the form to fill in
+    private StudentApplication application = new();
+
+    private bool isSubmitting;
+    private string? successMessage;
+    private string? errorMessage;
+
+    // These read values from the URL, e.g.
+    // /student-applications/create?country=Ireland&university=Trinity%20College
+    // They're filled when the user clicks "Apply" on the Explorer page.
+    [SupplyParameterFromQuery(Name = "country")]
+    public string? PrefillCountry { get; set; }
+
+    [SupplyParameterFromQuery(Name = "university")]
+    public string? PrefillUniversity { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Pre-fill the form if we came from the Explorer page
+        application.Country = PrefillCountry ?? "";
+        application.UniversityName = PrefillUniversity ?? "";
+    }
+
+    // Runs ONLY when the form is valid (all validation rules passed)
+    private async Task SaveAsync(StudentApplication app)
+    {
+        isSubmitting = true;
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            // POST https://edutots.net/api/studentapplication
+            await ApplicationService.CreateAsync(app);
+
+            successMessage = $"Application for {app.StudentName} was submitted successfully!";
+
+            // Reset the form so they can submit another one
+            application = new StudentApplication();
+        }
+        catch (Exception ex)
+        {
+            // ex.Message usually includes the status code, e.g. "400 (Bad Request)",
+            // which helps you find the problem
+            errorMessage = $"Could not submit the application. {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

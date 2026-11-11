@@ -1,0 +1,110 @@
+﻿@*
+    STUDENT APPLICATIONS PAGE: shows all applications (GET).
+*@
+@page "/student-applications"
+@inject StudentApplicationService ApplicationService
+@inject NavigationManager Navigation
+
+<PageTitle>Student Applications</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Student Applications</h1>
+    <a class="btn btn-success" href="student-applications/create">+ New Application</a>
+</div>
+
+@* Success message after coming back from the Edit page
+   (the Edit page sends us to /student-applications?updated=5) *@
+@if (Updated is not null)
+{
+    <div class="alert alert-success">Application #@Updated was updated successfully.</div>
+}
+
+@if (isLoading)
+{
+    @* LOADING STATE *@
+    <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span>Loading applications...</span>
+    </div>
+}
+else if (hasError)
+{
+    @* ERROR STATE *@
+    <div class="alert alert-danger">
+        Unable to retrieve data.
+        <button class="btn btn-sm btn-outline-danger ms-2" @onclick="LoadApplicationsAsync">Try again</button>
+    </div>
+}
+else if (applications.Count == 0)
+{
+    <div class="alert alert-info">No applications yet.</div>
+}
+else
+{
+    @* table-responsive = scrolls sideways on small screens instead of breaking *@
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Id</th>
+                    <th>Student Name</th>
+                    <th>University</th>
+                    <th>Country</th>
+                    <th>Course</th>
+                    <th>Application Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var app in applications)
+                {
+                    @* Reusable row component. When Edit is clicked → EditApplication runs *@
+                    <StudentApplicationRow Application="app" OnEdit="EditApplication" />
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<StudentApplication> applications = new();
+    private bool isLoading;
+    private bool hasError;
+
+    // Reads "?updated=5" from the URL (null if it isn't there)
+    [SupplyParameterFromQuery]
+    public int? Updated { get; set; }
+
+    // Runs once when the page opens
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadApplicationsAsync();
+    }
+
+    private async Task LoadApplicationsAsync()
+    {
+        isLoading = true;
+        hasError = false;
+
+        try
+        {
+            // GET https://edutots.net/api/studentapplication
+            var result = await ApplicationService.GetAllAsync();
+            applications = result.OrderBy(a => a.Id).ToList();   // sort by Id
+        }
+        catch (Exception)
+        {
+            hasError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // EventCallback handler: a row's Edit button was clicked
+    private void EditApplication(StudentApplication app)
+    {
+        Navigation.NavigateTo($"/student-applications/edit/{app.Id}");
+    }
+}
