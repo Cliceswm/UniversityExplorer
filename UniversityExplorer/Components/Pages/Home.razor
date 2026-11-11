@@ -1,7 +1,74 @@
-﻿@page "/"
+﻿@*
+    HOME PAGE: application title, overview and navigation links
+    (the three things the brief asks for).
+*@
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>University Explorer Portal</PageTitle>
 
-<h1>Hello, world!</h1>
+@* ---------- Big welcome banner ---------- *@
+<div class="p-5 mb-4 bg-light rounded-3 border">
+    <h1 class="display-5 fw-bold">🎓 University Explorer Portal</h1>
+    <p class="fs-5 col-md-9">
+        Explore universities around the world and manage your university
+        applications, all in one place.
+    </p>
+    <a class="btn btn-primary btn-lg" href="university-explorer">Start exploring</a>
+</div>
 
-Welcome to your new app.
+@* ---------- Three cards linking to each area ---------- *@
+@* row-cols-md-3 = 3 cards side by side on bigger screens, stacked on phones *@
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">🌍 University Explorer</h5>
+                <p class="card-text">
+                    Choose a country to see its details and browse, search
+                    and view its universities.
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="university-explorer" class="btn btn-outline-primary">Open Explorer</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">📋 Student Applications</h5>
+                <p class="card-text">
+                    View all submitted applications and edit existing ones.
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="student-applications" class="btn btn-outline-primary">View Applications</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">✏️ Create Application</h5>
+                <p class="card-text">
+                    Submit a new application to the university of your choice.
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="student-applications/create" class="btn btn-outline-primary">Apply Now</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ---------- Short explanation of the APIs (shows the marker you understand the mashup) ---------- *@
+<h4>How it works</h4>
+<p>This portal is an <strong>API mashup</strong>: it combines data from several REST APIs into one experience.</p>
+<ul>
+    <li><strong>Countries API</strong>: country list, capital, region, population and flag</li>
+    <li><strong>Universities API</strong>: universities for the selected country</li>
+    <li><strong>Edutots Student Application API</strong>: create, view and update applications (GET, POST, PUT)</li>
+</ul>

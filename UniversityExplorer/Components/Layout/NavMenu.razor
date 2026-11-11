@@ -1,39 +1,49 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@*
+    NAVIGATION MENU: the sidebar on the left.
+    The brief requires links to: Home, University Explorer,
+    Student Applications and Create Student Application.
+*@
+
+@* ---------- Top bar with the app name ---------- *@
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">UniversityExplorer</a>
+        <a class="navbar-brand" href="">University Explorer Portal</a>
     </div>
 </div>
 
+@* Hidden checkbox used to open/close the menu on small screens (phones) *@
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
+
+        @* Home. NavLinkMatch.All = only highlight on exactly "/" *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
 
-               
+        @* API mashup page *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="university-explorer">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> University Explorer
             </NavLink>
         </div>
 
-                @* Link to the list of applications *@
+        @* List of applications (GET) *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="student-applications" Match="NavLinkMatch.All">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Student Applications
             </NavLink>
         </div>
 
-        @* Link to the create form *@
+        @* Create form (POST) *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="student-applications/create">
                 <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Create Application
             </NavLink>
         </div>
+
     </nav>
 </div>
-
