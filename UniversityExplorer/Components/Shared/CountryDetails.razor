@@ -1,0 +1,38 @@
+﻿@*
+    CountryDetails: shows info about ONE country in a card.
+    Used on the University Explorer page when a country is selected.
+    It only DISPLAYS data, so it needs a Parameter but no EventCallback.
+*@
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-body d-flex align-items-center gap-4">
+
+        @* Show the flag image if the API gave us one.
+           (Emoji flags don't display on Windows, so the image is safer.) *@
+        @if (!string.IsNullOrEmpty(Country.Flags?.Png))
+        {
+            <img src="@Country.Flags.Png" alt="Flag of @Country.Name"
+                 style="width:110px" class="border rounded" />
+        }
+
+        <div>
+            <h4 class="card-title mb-2">@Country.Flag @Country.Name</h4>
+
+            @* "??" means: if Capital is null, show "N/A" instead *@
+            <p class="mb-1"><strong>Capital:</strong> @(Country.Capital ?? "N/A")</p>
+
+            <p class="mb-1"><strong>Region:</strong> @Country.Region</p>
+
+            @* ToString("N0") formats the number with commas: 4994724 → 4,994,724 *@
+            <p class="mb-0"><strong>Population:</strong> @Country.Population.ToString("N0")</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    // The country to display. The PARENT page passes this in:
+    //   <CountryDetails Country="selectedCountry" />
+    // EditorRequired = Visual Studio warns you if you forget to pass it.
+    [Parameter, EditorRequired]
+    public Country Country { get; set; } = default!;
+}

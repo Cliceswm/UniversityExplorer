@@ -1,0 +1,56 @@
+﻿@*
+    UniversityDetails: shows ALL the details of the selected university.
+    It has TWO EventCallbacks:
+      - OnClose: user clicked the X
+      - OnApply: user clicked "Apply" (we'll use this to open the Create form)
+*@
+
+<div class="card border-primary mb-4 shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>University Details</strong>
+
+        @* Clicking X tells the parent to close/hide this panel *@
+        <button type="button" class="btn-close" aria-label="Close" @onclick="OnClose"></button>
+    </div>
+
+    <div class="card-body">
+        <h5>@University.Name</h5>
+        <p class="mb-1"><strong>Country:</strong> @University.Country</p>
+
+        @* Only show State/Province if it has a value *@
+        @if (!string.IsNullOrEmpty(University.StateProvince))
+        {
+            <p class="mb-1"><strong>State/Province:</strong> @University.StateProvince</p>
+        }
+
+        @* A university can have several websites, so we loop through them *@
+        <p class="mb-1">
+            <strong>Website:</strong>
+            @foreach (var webpage in University.WebPages)
+            {
+                <a href="@webpage" target="_blank" rel="noopener" class="me-2">@webpage</a>
+            }
+        </p>
+
+        @* string.Join puts the list together with commas: "tcd.ie, tcd.com" *@
+        <p class="mb-3"><strong>Domain:</strong> @string.Join(", ", University.Domains)</p>
+
+        <button class="btn btn-primary" @onclick="() => OnApply.InvokeAsync(University)">
+            Apply to this university
+        </button>
+    </div>
+</div>
+
+@code {
+    // INPUT: the university to show
+    [Parameter, EditorRequired]
+    public University University { get; set; } = default!;
+
+    // OUTPUT: "close me" (no data needed, so plain EventCallback)
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    // OUTPUT: "the user wants to apply to this university"
+    [Parameter]
+    public EventCallback<University> OnApply { get; set; }
+}

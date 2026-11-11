@@ -1,0 +1,91 @@
+﻿@*
+    StudentApplicationForm: ONE form used by TWO pages:
+      - Create page: starts with an empty application, sends POST
+      - Edit page:   starts with an existing application, sends PUT
+    The form doesn't know or care which. It just says "the user submitted
+    valid data" through OnValidSubmit, and the PAGE decides what to do.
+*@
+
+@* EditForm = Blazor's form.
+   Model = the object the inputs read from and write to.
+   OnValidSubmit = runs ONLY if all validation rules pass. *@
+<EditForm Model="Application" OnValidSubmit="HandleValidSubmit">
+
+    @* Turns on the [Required], [EmailAddress] etc. rules from the model *@
+    <DataAnnotationsValidator />
+
+    @* Shows a list of all errors at the top *@
+    <ValidationSummary class="text-danger" />
+
+    @* Each field: label + input + its own error message.
+       @bind-Value links the input to a property (two-way: typing updates the model). *@
+
+    <div class="mb-3">
+        <label class="form-label">Student Name</label>
+        <InputText class="form-control" @bind-Value="Application.StudentName" />
+        <ValidationMessage For="() => Application.StudentName" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Email Address</label>
+        <InputText type="email" class="form-control" @bind-Value="Application.Email" />
+        <ValidationMessage For="() => Application.Email" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Country</label>
+        <InputText class="form-control" @bind-Value="Application.Country" />
+        <ValidationMessage For="() => Application.Country" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">University Name</label>
+        <InputText class="form-control" @bind-Value="Application.UniversityName" />
+        <ValidationMessage For="() => Application.UniversityName" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Course Name</label>
+        <InputText class="form-control" @bind-Value="Application.CourseName" />
+        <ValidationMessage For="() => Application.CourseName" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Application Date</label>
+        @* InputDate shows a date picker *@
+        <InputDate class="form-control" @bind-Value="Application.ApplicationDate" />
+        <ValidationMessage For="() => Application.ApplicationDate" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Personal Statement (optional)</label>
+        <InputTextArea class="form-control" rows="4" @bind-Value="Application.PersonalStatement" />
+        <ValidationMessage For="() => Application.PersonalStatement" class="text-danger" />
+    </div>
+
+    @* Disabled while saving so the user can't click twice *@
+    <button type="submit" class="btn btn-success" disabled="@IsSubmitting">
+        @(IsSubmitting ? "Saving..." : SubmitText)
+    </button>
+</EditForm>
+
+@code {
+    // INPUT: the application being created or edited
+    [Parameter, EditorRequired]
+    public StudentApplication Application { get; set; } = default!;
+
+    // INPUT: button text, e.g. "Submit Application" or "Update Application"
+    [Parameter]
+    public string SubmitText { get; set; } = "Submit";
+
+    // INPUT: true while the page is waiting for the API (disables the button)
+    [Parameter]
+    public bool IsSubmitting { get; set; }
+
+    // OUTPUT: "the user submitted VALID data, here it is"
+    [Parameter]
+    public EventCallback<StudentApplication> OnValidSubmit { get; set; }
+
+    // Called by EditForm when validation passes: pass it up to the page
+    private Task HandleValidSubmit() => OnValidSubmit.InvokeAsync(Application);
+}

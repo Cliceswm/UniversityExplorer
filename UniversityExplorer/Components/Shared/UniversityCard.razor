@@ -1,0 +1,41 @@
+﻿@*
+    UniversityCard: a small summary card for ONE university.
+    The Explorer page shows one of these for each university in the list.
+    When the user clicks the card, it tells the parent page using OnSelect.
+*@
+
+@* If this card is the selected one, add a blue border.
+   @onclick runs when the card is clicked: it "invokes" the EventCallback,
+   sending this university back up to the parent page. *@
+<div class="card h-100 @(IsSelected ? "border-primary border-2" : "")"
+     style="cursor:pointer"
+     @onclick="() => OnSelect.InvokeAsync(University)">
+
+    <div class="card-body">
+        <h6 class="card-title">@University.Name</h6>
+        <p class="card-text text-muted small mb-1">@University.Country</p>
+
+        @if (!string.IsNullOrEmpty(University.Website))
+        {
+            @* target="_blank" opens the link in a new tab.
+               stopPropagation stops the link click from ALSO selecting the card. *@
+            <a href="@University.Website" target="_blank" rel="noopener"
+               @onclick:stopPropagation="true" class="small">@University.Website</a>
+        }
+    </div>
+</div>
+
+@code {
+    // INPUT: the university to show (passed in by the parent)
+    [Parameter, EditorRequired]
+    public University University { get; set; } = default!;
+
+    // INPUT: is this the currently selected university? (controls the blue border)
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    // OUTPUT: tells the parent "this university was clicked".
+    // The parent decides what to do (e.g. show the details panel).
+    [Parameter]
+    public EventCallback<University> OnSelect { get; set; }
+}

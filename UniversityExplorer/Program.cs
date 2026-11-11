@@ -1,10 +1,17 @@
 using UniversityExplorer.Components;
-
+using UniversityExplorer.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register our API services.
+// AddHttpClient gives each service its own HttpClient
+// (the recommended way to call APIs in .NET).
+builder.Services.AddHttpClient<CountryService>();
+builder.Services.AddHttpClient<UniversityService>();
+builder.Services.AddHttpClient<StudentApplicationService>();
 
 var app = builder.Build();
 
