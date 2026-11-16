@@ -1,5 +1,6 @@
 ﻿@*
-    STUDENT APPLICATIONS PAGE: shows all applications (GET).
+    STUDENT APPLICATIONS PAGE: shows all applications (GET)
+    and lets the user delete one (DELETE, distinction feature).
 *@
 @page "/student-applications"
 @inject StudentApplicationService ApplicationService
@@ -12,8 +13,7 @@
     <a class="btn btn-success" href="student-applications/create">+ New Application</a>
 </div>
 
-@* Success message after coming back from the Edit page
-   (the Edit page sends us to /student-applications?updated=5) *@
+@* Success message after coming back from the Edit page (?updated=5) *@
 @if (Updated is not null)
 {
     <div class="alert alert-success">Application #@Updated was updated successfully.</div>
@@ -41,7 +41,6 @@ else if (applications.Count == 0)
 }
 else
 {
-    @* table-responsive = scrolls sideways on small screens instead of breaking *@
     <div class="table-responsive">
         <table class="table table-striped table-hover align-middle">
             <thead class="table-dark">
@@ -58,11 +57,77 @@ else
             <tbody>
                 @foreach (var app in applications)
                 {
-                    @* Reusable row component. When Edit is clicked → EditApplication runs *@
-                    <StudentApplicationRow Application="app" OnEdit="EditApplication" />
+                    @* Row component with TWO EventCallbacks *@
+                    <StudentApplicationRow Application="app"
+                                           OnEdit="EditApplication"
+                                           OnDelete="AskToDelete" />
                 }
             </tbody>
         </table>
+    </div>
+}
+
+@* ================= DELETE CONFIRMATION POP-UP (MODAL) =================
+   Only shown after the user clicks Delete on a row.
+   It uses Bootstrap's modal styles. "position: fixed" means it always
+   appears in the middle of the SCREEN, wherever the user has scrolled to.
+   Blazor shows/hides it with @if, so no JavaScript is needed. *@
+@if (applicationToDelete is not null)
+{
+    @* "d-block" makes the modal visible (Bootstrap hides modals by default) *@
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete application</h5>
+                    <button type="button" class="btn-close" aria-label="Close"
+                            @onclick="CancelDelete" disabled="@isDeleting"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p>
+                        Are you sure you want to delete application
+                        <strong>#@applicationToDelete.Id</strong> (@applicationToDelete.StudentName)?
+                    </p>
+                    <p class="text-danger small mb-0">This cannot be undone.</p>
+
+                    @* If the delete fails, show the error INSIDE the pop-up so the user sees it *@
+                    @if (deleteError is not null)
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@deleteError</div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDelete" disabled="@isDeleting">
+                        Cancel
+                    </button>
+                    <button class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@isDeleting">
+                        @(isDeleting ? "Deleting..." : "Yes, delete")
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    @* The dark see-through layer behind the pop-up *@
+    <div class="modal-backdrop fade show"></div>
+}
+
+@* ================= SUCCESS MESSAGE (bottom-right corner) =================
+   position-fixed + bottom-0 + end-0 = stuck to the bottom-right of the
+   screen, so it's visible wherever the user has scrolled to. *@
+@if (successMessage is not null)
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1060">
+        <div class="alert alert-success alert-dismissible shadow mb-0">
+            @successMessage
+            @* Clicking X clears the message, which hides it *@
+            <button type="button" class="btn-close" aria-label="Close"
+                    @onclick="() => successMessage = null"></button>
+        </div>
     </div>
 }
 
@@ -71,11 +136,16 @@ else
     private bool isLoading;
     private bool hasError;
 
+    // ----- Delete state -----
+    private StudentApplication? applicationToDelete;   // the one waiting for "Are you sure?"
+    private bool isDeleting;                           // true while the API is deleting
+    private string? successMessage;
+    private string? deleteError;
+
     // Reads "?updated=5" from the URL (null if it isn't there)
     [SupplyParameterFromQuery]
     public int? Updated { get; set; }
 
-    // Runs once when the page opens
     protected override async Task OnInitializedAsync()
     {
         await LoadApplicationsAsync();
@@ -90,7 +160,7 @@ else
         {
             // GET https://edutots.net/api/studentapplication
             var result = await ApplicationService.GetAllAsync();
-            applications = result.OrderBy(a => a.Id).ToList();   // sort by Id
+            applications = result.OrderBy(a => a.Id).ToList();
         }
         catch (Exception)
         {
@@ -102,9 +172,59 @@ else
         }
     }
 
-    // EventCallback handler: a row's Edit button was clicked
+    // ===== EventCallback handlers (called by StudentApplicationRow) =====
+
+    // Edit button clicked → go to the Edit page
     private void EditApplication(StudentApplication app)
     {
         Navigation.NavigateTo($"/student-applications/edit/{app.Id}");
+    }
+
+    // Delete button clicked → DON'T delete yet, just open the pop-up
+    private void AskToDelete(StudentApplication app)
+    {
+        applicationToDelete = app;
+        successMessage = null;
+        deleteError = null;
+    }
+
+    // ===== Pop-up buttons =====
+
+    // "Cancel" or X → close the pop-up
+    private void CancelDelete()
+    {
+        applicationToDelete = null;
+        deleteError = null;
+    }
+
+    // "Yes, delete" → call the API
+    private async Task ConfirmDeleteAsync()
+    {
+        if (applicationToDelete is null) return;
+
+        isDeleting = true;
+        deleteError = null;
+
+        try
+        {
+            // DELETE https://edutots.net/api/studentapplication/5
+            await ApplicationService.DeleteAsync(applicationToDelete.Id);
+
+            // Remove it from our list too, so the table updates
+            // straight away without loading everything again
+            applications.Remove(applicationToDelete);
+
+            successMessage = $"Application #{applicationToDelete.Id} ({applicationToDelete.StudentName}) was deleted.";
+            applicationToDelete = null;   // close the pop-up
+        }
+        catch (Exception ex)
+        {
+            // Keep the pop-up open and show the error inside it
+            deleteError = $"Could not delete the application. {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
     }
 }

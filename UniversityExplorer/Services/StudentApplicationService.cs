@@ -53,4 +53,15 @@ public class StudentApplicationService(HttpClient http)
         var response = await http.PutAsJsonAsync($"{BaseUrl}/{id}", application);
         response.EnsureSuccessStatusCode();
     }
+
+    // DELETE: remove an application (distinction feature)
+    public async Task DeleteAsync(int id)
+    {
+        // DELETE https://edutots.net/api/studentapplication/5
+        var response = await http.DeleteAsync($"{BaseUrl}/{id}");
+
+        // If the API refuses (e.g. 404 Not Found, or 405 if DELETE isn't supported),
+        // throw an exception so the page can show an error message
+        response.EnsureSuccessStatusCode();
+    }
 }
