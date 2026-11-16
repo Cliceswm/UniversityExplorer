@@ -36,20 +36,12 @@ else if (countriesError)
 }
 else
 {
-    <div class="mb-4" style="max-width:420px">
-        <label class="form-label fw-bold" for="countrySelect">Select Country</label>
-
-        @* @bind keeps selectedCountryName in sync with the dropdown.
-           @bind:after runs OnCountryChangedAsync every time the user picks a country. *@
-        <select id="countrySelect" class="form-select"
-                @bind="selectedCountryName" @bind:after="OnCountryChangedAsync">
-            <option value="">-- Choose a country --</option>
-            @foreach (var country in countries)
-            {
-                <option value="@country.Name">@country.Name</option>
-            }
-        </select>
-    </div>
+    @* Reusable component.
+       IN:  the list of countries + which one is selected
+       OUT: OnCountrySelected, so when a country is picked, OnCountrySelectedAsync runs here *@
+    <CountrySelector Countries="countries"
+                     SelectedCountryName="@selectedCountryName"
+                     OnCountrySelected="OnCountrySelectedAsync" />
 }
 
 @* ================= 2. COUNTRY DETAILS + 3. UNIVERSITIES ================= *@
@@ -79,13 +71,27 @@ else
     }
     else
     {
-        @* ---------- SEARCH BOX ----------
-           @bind:event="oninput" updates SearchText on EVERY key press
-           (the default would only update when you leave the box). *@
-        <input class="form-control mb-2"
-               @bind="SearchText"
-               @bind:event="oninput"
-               placeholder="Search university..." />
+        @* ---------- SEARCH BOX + SORT DROPDOWN ----------
+           Side by side: col-md-8 + col-md-4 = 12 columns = full width.
+           On phones they stack on top of each other. *@
+        <div class="row g-2 mb-2">
+            <div class="col-md-8">
+                @* @bind:event="oninput" = filter on EVERY key press *@
+                <input class="form-control"
+                       @bind="SearchText"
+                       @bind:event="oninput"
+                       placeholder="Search university..." />
+            </div>
+            <div class="col-md-4">
+                @* SORT DROPDOWN (distinction feature).
+                   @bind links the chosen option to sortOrder;
+                   the list re-sorts automatically when it changes. *@
+                <select class="form-select" @bind="sortOrder" aria-label="Sort universities">
+                    <option value="az">Sort: Name A–Z</option>
+                    <option value="za">Sort: Name Z–A</option>
+                </select>
+            </div>
+        </div>
 
         <p class="text-muted small">
             Showing @FilteredUniversities.Count of @universities.Count universities
@@ -147,12 +153,15 @@ else
     private List<Country> countries = new();          // all countries (for the dropdown)
     private List<University> universities = new();    // universities of the chosen country
 
-    private string selectedCountryName = "";          // value of the dropdown
+    private string selectedCountryName = "";          // name of the country picked
     private Country? selectedCountry;                 // the full Country object picked
     private University? selectedUniversity;           // the university clicked (or null)
 
     // What the user typed in the search box
     private string SearchText { get; set; } = "";
+
+    // Sort order chosen in the dropdown: "az" (A to Z) or "za" (Z to A)
+    private string sortOrder = "az";
 
     // true/false flags that control the loading and error messages
     private bool isLoadingCountries;
@@ -160,16 +169,33 @@ else
     private bool isLoadingUniversities;
     private bool universitiesError;
 
-    // ===================== SEARCH =====================
+    // ===================== SEARCH + SORT =====================
 
-    // A "computed property": recalculated every time the page redraws.
-    // Because SearchText updates on each key press, the list filters while typing.
-    private List<University> FilteredUniversities =>
-        string.IsNullOrWhiteSpace(SearchText)
-            ? universities                                       // empty search → show all
-            : universities
-                .Where(u => u.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) // ignore upper/lower case
-                .ToList();
+    // The list the page actually shows: FILTERED by the search, then SORTED.
+    // It's recalculated every time the page redraws, so typing in the search
+    // box or changing the sort dropdown updates the list instantly.
+    private List<University> FilteredUniversities
+    {
+        get
+        {
+            // IEnumerable = "a sequence we can keep adding steps to"
+            IEnumerable<University> result = universities;
+
+            // 1. FILTER: only keep names containing the search text (ignoring upper/lower case)
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                result = result.Where(u => u.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // 2. SORT: A–Z or Z–A by name
+            result = sortOrder == "za"
+                ? result.OrderByDescending(u => u.Name)   // Z → A
+                : result.OrderBy(u => u.Name);            // A → Z
+
+            // 3. Turn it into a List for the page to display
+            return result.ToList();
+        }
+    }
 
     // ===================== LIFECYCLE =====================
 
@@ -201,13 +227,17 @@ else
         }
     }
 
+    // EventCallback handler: CountrySelector → OnCountrySelected
     // Runs every time the user picks a country in the dropdown
-    private async Task OnCountryChangedAsync()
+    private async Task OnCountrySelectedAsync(string countryName)
     {
+        selectedCountryName = countryName;
+
         // Find the full Country object that matches the name chosen
         selectedCountry = countries.FirstOrDefault(c => c.Name == selectedCountryName);
 
         // Reset everything from the previous country
+        // (sortOrder is NOT reset, so the user's sort choice is kept)
         selectedUniversity = null;
         SearchText = "";
         universities = new();
@@ -269,7 +299,7 @@ else
 
     // UniversityDetails → OnApply
     // Go to the Create page, passing the country and university in the URL
-    // so the form can be pre-filled (we'll handle that in Step 6).
+    // so the form can be pre-filled.
     private void ApplyToUniversity(University university)
     {
         var country = Uri.EscapeDataString(university.Country);

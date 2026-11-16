@@ -1,0 +1,41 @@
+﻿@*
+    CountrySelector: the country dropdown as a reusable component.
+    When the user picks a country, it tells the parent page using
+    OnCountrySelected (the brief's "Country selected" EventCallback).
+*@
+
+<div class="mb-4" style="max-width:420px">
+    <label class="form-label fw-bold" for="countrySelect">Select Country</label>
+
+    @* @onchange runs HandleChange every time the user picks an option *@
+    <select id="countrySelect" class="form-select" @onchange="HandleChange">
+        <option value="">-- Choose a country --</option>
+        @foreach (var country in Countries)
+        {
+            <option value="@country.Name" selected="@(country.Name == SelectedCountryName)">
+                @country.Name
+            </option>
+        }
+    </select>
+</div>
+
+@code {
+    // INPUT: the list of countries to show in the dropdown
+    [Parameter, EditorRequired]
+    public List<Country> Countries { get; set; } = new();
+
+    // INPUT: which country is currently selected
+    [Parameter]
+    public string SelectedCountryName { get; set; } = "";
+
+    // OUTPUT: "the user selected this country" (sends the country name up)
+    [Parameter]
+    public EventCallback<string> OnCountrySelected { get; set; }
+
+    // e.Value = the value of the option the user picked
+    private Task HandleChange(ChangeEventArgs e)
+    {
+        var countryName = e.Value?.ToString() ?? "";
+        return OnCountrySelected.InvokeAsync(countryName);
+    }
+}
