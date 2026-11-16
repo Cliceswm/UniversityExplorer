@@ -123,6 +123,3 @@ I used EventCallback so the components can send information back to the page:
 
 ### 11. Delete application (extra)
 <img width="1886" height="898" alt="image" src="https://github.com/user-attachments/assets/113624b6-58f2-4d02-b815-91c46196cc99" />
-
-### 12. Sorting universities (extra)
-<img width="1512" height="787" alt="image" src="https://github.com/user-attachments/assets/e305fb14-70fd-4193-b5c1-28cc4202d43d" />
